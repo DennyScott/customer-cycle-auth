@@ -1,0 +1,133 @@
+import { OAuthTokens, OAuthClients } from '../models/auth';
+import Stores from '../models/store';
+
+const registerShop = shopId => {
+  if (!isString(shopId)) {
+    return;
+  }
+
+  const storeInstance = new Stores({
+    shopId,
+  });
+
+  try {
+    storeInstance.save(err => {
+      if (err) console.error(`Store instance failed to save ${err}`);
+    });
+  } catch (e) {
+    console.error(`There was an error saving user instance ${e}`);
+  }
+
+  return storeInstance;
+};
+
+/**
+ * Get access token.
+ */
+
+const getAccessToken = function(bearerToken) {
+  // Adding `.lean()`, as we get a mongoose wrapper object back from `findOne(...)`, and oauth2-server complains.
+  return OAuthTokens.findOne({ accessToken: bearerToken }).lean();
+};
+
+/**
+ * Get client.
+ */
+
+const getClient = function(clientId, clientSecret) {
+  const client = {
+    clientId,
+    clientSecret,
+    grants: ['password'],
+    redirectUris: null,
+  };
+
+  return client;
+};
+
+/**
+ * Get refresh token.
+ */
+
+const getRefreshToken = function(refreshToken) {
+  return OAuthTokens.findOne({ refreshToken: refreshToken }).lean();
+};
+
+/**
+ * Save token.
+ */
+
+const saveToken = function(token, client, shop) {
+  var accessToken = new OAuthTokens({
+    accessToken: token.accessToken,
+    accessTokenExpiresAt: token.accessTokenExpiresAt,
+    client: client,
+    clientId: client.clientId,
+    refreshToken: token.refreshToken,
+    refreshTokenExpiresAt: token.refreshTokenExpiresAt,
+    user: shop,
+    userId: shop._id,
+  });
+  // Can't just chain `lean()` to `save()` as we did with `findOne()` elsewhere. Instead we use `Promise` to resolve the data.
+  return new Promise(function(resolve, reject) {
+    accessToken.save(function(err, data) {
+      if (err) reject(err);
+      else resolve(data);
+    });
+  }).then(function(saveResult) {
+    // `saveResult` is mongoose wrapper object, not doc itself. Calling `toJSON()` returns the doc.
+    saveResult = saveResult && typeof saveResult == 'object' ? saveResult.toJSON() : saveResult;
+
+    // Unsure what else points to `saveResult` in oauth2-server, making copy to be safe
+    var data = new Object();
+    for (var prop in saveResult) data[prop] = saveResult[prop];
+
+    // /oauth-server/lib/models/token-model.js complains if missing `client` and `user`. Creating missing properties.
+    data.client = data.clientId;
+    data.user = data.userId;
+
+    return data;
+  });
+};
+
+/**
+ * the node-oauth2-server uses this method to save an authorization code.
+ * @param {Object} code - the authorization code object
+ * @param {String} code.authorizationCode - the authorization code string
+ * @param {Date} code.expiresAt - the time when the code should expire
+ * @param {String} code.redirectUri - where to redirect to with the code
+ * @param {String} [code.scope] - the authorized access scope
+ * @param {Object} client - the client object
+ * @param {String} client.id - the client id
+ * @param {Object} user - the user object
+ * @param {String} user.username - the user identifier
+ * @return {Object} code - the code object saved
+ */
+const saveAuthorizationCode = function(code, client, store) {
+  var self = this,
+    codeToSave;
+
+  codeToSave = {
+    authorizationCode: code.authorizationCode,
+    expiresAt: code.expiresAt,
+    redirectUri: code.redirectUri,
+    scope: code.scope,
+    client: client.id,
+    user: store._id,
+  };
+
+  self.authorizationCodeStore.setExpiration(codeToSave.authorizationCode, codeToSave, codeToSave.expiresAt);
+
+  code = Object.assign({}, code, {
+    client: client.id,
+    user: store._id,
+  });
+
+  return code;
+};
+
+function isString(parameter) {
+  return parameter != null && (typeof parameter === 'string' || parameter instanceof String) ? true : false;
+}
+
+export { getAccessToken, getClient, getRefreshToken, saveToken, saveAuthorizationCode, registerUser };
