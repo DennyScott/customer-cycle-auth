@@ -1,17 +1,98 @@
 {
-  "name": "nodejs-creating-restful-apis",
+  "name": "comment-server",
   "version": "1.0.0",
-  "description": "",
-  "main": "app.js",
+  "description": "REST API server for comment system",
+  "repository": "https://github.com/axiomzen/cc_DennyScott_CommentSystem",
+  "author": "Denny Scott",
+  "license": "MIT",
+  "main": "dist/index.js",
   "scripts": {
-    "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "prestart": "npm run -s build",
+    "start": "node dist/index.js",
+    "dev": "nodemon src/index.js --exec \"node -r dotenv/config -r babel-register\"",
+    "clean": "rimraf dist",
+    "build": "npm run clean && mkdir -p dist && babel src -s -D -d dist",
+    "test": "jest --watch",
+    "lint": "esw -w src test"
   },
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "express",
+    "babel",
+    "boilerplate",
+    "scaffold",
+    "es6",
+    "es2015",
+    "es2016",
+    "es2017",
+    "jest",
+    "eslint"
+  ],
   "dependencies": {
-    "body-parser": "^1.18.2",
-    "express": "^4.16.2",
-    "mongoose": "^5.0.1"
+    "async": "^2.6.1",
+    "babel-cli": "^6.24.1",
+    "babel-plugin-transform-object-rest-spread": "^6.26.0",
+    "babel-preset-env": "^1.4.0",
+    "body-parser": "^1.17.1",
+    "express": "^4.15.2",
+    "express-bearer-token": "^2.1.0",
+    "express-oauth-server": "^2.0.0",
+    "mongoose": "^4.11.13",
+    "morgan": "^1.7.0",
+    "passport": "^0.4.0",
+    "rimraf": "^2.6.1",
+    "socket.io": "^2.0.3"
+  },
+  "devDependencies": {
+    "babel-eslint": "^7.2.3",
+    "babel-jest": "^21.0.2",
+    "babel-register": "^6.24.1",
+    "dotenv": "^4.0.0",
+    "eslint": "^4.6.1",
+    "eslint-plugin-import": "^2.2.0",
+    "eslint-plugin-jest": "^21.0.2",
+    "eslint-watch": "^3.1.0",
+    "jest": "^21.0.2",
+    "nodemon": "^1.11.0",
+    "supertest": "^3.0.0"
+  },
+  "babel": {
+    "presets": [
+      [
+        "env",
+        {
+          "targets": {
+            "node": "current"
+          }
+        }
+      ]
+    ],
+    "plugins": [
+      "transform-object-rest-spread"
+    ]
+  },
+  "eslintConfig": {
+    "parser": "babel-eslint",
+    "plugins": [
+      "import",
+      "jest"
+    ],
+    "parserOptions": {
+      "ecmaVersion": 2017,
+      "sourceType": "module"
+    },
+    "env": {
+      "node": true,
+      "jest": true
+    },
+    "extends": [
+      "eslint:recommended"
+    ],
+    "rules": {
+      "jest/no-focused-tests": 2,
+      "jest/no-identical-title": 2
+    }
+  },
+  "jest": {
+    "testEnvironment": "node"
   }
 }
