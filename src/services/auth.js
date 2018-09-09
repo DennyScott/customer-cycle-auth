@@ -1,24 +1,25 @@
 import { OAuthTokens, OAuthClients } from '../models/auth';
-import Stores from '../models/store';
+import Users from '../models/user';
 
-const registerShop = shopId => {
-  if (!isString(shopId)) {
+const registerUser = (username, password) => {
+  if (!isString(username) || !isString(password)) {
     return;
   }
 
-  const storeInstance = new Stores({
-    shopId,
+  const userInstance = new Users({
+    password,
+    username,
   });
 
   try {
-    storeInstance.save(err => {
-      if (err) console.error(`Store instance failed to save ${err}`);
+    userInstance.save(err => {
+      if (err) console.error(`User instance failed to save ${err}`);
     });
   } catch (e) {
     console.error(`There was an error saving user instance ${e}`);
   }
 
-  return storeInstance;
+  return userInstance;
 };
 
 /**
@@ -54,10 +55,21 @@ const getRefreshToken = function(refreshToken) {
 };
 
 /**
+ * Get user.
+ */
+
+const getUser = function(username, password) {
+  return Users.findOne({
+    username: username,
+    password: password,
+  }).lean();
+};
+
+/**
  * Save token.
  */
 
-const saveToken = function(token, client, shop) {
+const saveToken = function(token, client, user) {
   var accessToken = new OAuthTokens({
     accessToken: token.accessToken,
     accessTokenExpiresAt: token.accessTokenExpiresAt,
@@ -65,8 +77,8 @@ const saveToken = function(token, client, shop) {
     clientId: client.clientId,
     refreshToken: token.refreshToken,
     refreshTokenExpiresAt: token.refreshTokenExpiresAt,
-    user: shop,
-    userId: shop._id,
+    user: user,
+    userId: user._id,
   });
   // Can't just chain `lean()` to `save()` as we did with `findOne()` elsewhere. Instead we use `Promise` to resolve the data.
   return new Promise(function(resolve, reject) {
@@ -103,7 +115,7 @@ const saveToken = function(token, client, shop) {
  * @param {String} user.username - the user identifier
  * @return {Object} code - the code object saved
  */
-const saveAuthorizationCode = function(code, client, store) {
+const saveAuthorizationCode = function(code, client, user) {
   var self = this,
     codeToSave;
 
@@ -113,14 +125,14 @@ const saveAuthorizationCode = function(code, client, store) {
     redirectUri: code.redirectUri,
     scope: code.scope,
     client: client.id,
-    user: store._id,
+    user: user.username,
   };
 
   self.authorizationCodeStore.setExpiration(codeToSave.authorizationCode, codeToSave, codeToSave.expiresAt);
 
   code = Object.assign({}, code, {
     client: client.id,
-    user: store._id,
+    user: user.username,
   });
 
   return code;
@@ -130,4 +142,4 @@ function isString(parameter) {
   return parameter != null && (typeof parameter === 'string' || parameter instanceof String) ? true : false;
 }
 
-export { getAccessToken, getClient, getRefreshToken, saveToken, saveAuthorizationCode, registerUser };
+export { getAccessToken, getClient, getRefreshToken, getUser, saveToken, saveAuthorizationCode, registerUser };
